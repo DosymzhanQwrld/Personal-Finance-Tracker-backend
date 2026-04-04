@@ -1,23 +1,18 @@
 package main
 
 import (
+	"awesomeProject3/config"
 	"awesomeProject3/handlers"
 	"awesomeProject3/models"
 	"log"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
 func main() {
-	dsn := "host=localhost user=postgres password=postgres dbname=finance_db port=5432 sslmode=disable"
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		log.Fatal("Failed to connect to database: ", err)
-	}
+	db := config.ConnectDatabase()
 
-	err = db.AutoMigrate(&models.Category{}, &models.Tag{}, &models.Transaction{})
+	err := db.AutoMigrate(&models.Category{}, &models.Tag{}, &models.Transaction{})
 	if err != nil {
 		log.Fatal("Failed to migrate database: ", err)
 	}
