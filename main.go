@@ -37,9 +37,9 @@ func main() {
 	r.GET("/categories/:id", handlers.GetCategory)
 	r.DELETE("/categories/:id", handlers.DeleteCategory)
 
-	r.GET("/tags", handlers.GetTags)                     // 10. Все теги
-	r.POST("/tags", handlers.AddTag)                     // 11. Создать тег
-	r.POST("/transactions/:id/tags", handlers.AttachTag) // 12. Привязать тег к транзакции
+	r.GET("/tags", handlers.GetTags)
+	r.POST("/tags", handlers.AddTag)
+	r.POST("/transactions/:id/tags", handlers.AttachTag)
 
 	r.Run(":8080")
 }
