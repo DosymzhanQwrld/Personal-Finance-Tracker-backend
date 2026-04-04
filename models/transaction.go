@@ -7,6 +7,6 @@ type Transaction struct {
 	Amount     float64  `json:"amount"`
 	Note       string   `json:"note"`
 	CategoryID uint     `json:"category_id"`
-	Category   Category `json:"category"`
+	Category   Category `gorm:"foreignKey:CategoryID" json:"-"`
 	Tags       []Tag    `gorm:"many2many:transaction_tags;"`
 }
