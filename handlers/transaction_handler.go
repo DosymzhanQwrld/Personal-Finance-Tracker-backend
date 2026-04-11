@@ -12,9 +12,9 @@ import (
 var DB *gorm.DB
 
 func GetTransactions(c *gin.Context) {
+	userID, _ := c.Get("userID")
 	var transactionList []models.Transaction
-
-	query := DB.Preload("Category").Preload("Tags")
+	query := DB.Where("user_id = ?", userID).Preload("Category").Preload("Tags")
 	if catID := c.Query("category_id"); catID != "" {
 		query = query.Where("category_id = ?", catID)
 	}
@@ -29,36 +29,47 @@ func GetTransactions(c *gin.Context) {
 }
 
 func AddTransaction(c *gin.Context) {
+	userID, _ := c.Get("userID")
 	var transaction models.Transaction
 	if err := c.ShouldBindJSON(&transaction); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	var category models.Category
+	if err := DB.Where("id = ? AND user_id = ?", transaction.CategoryID, userID).First(&category).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Категория не найдена"})
+		return
+	}
+
+	transaction.UserID = userID.(uint)
+
 	if err := DB.Create(&transaction).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create transaction"})
 		return
 	}
+
+	DB.Preload("Category").Preload("Tags").First(&transaction, transaction.ID)
+
 	c.JSON(http.StatusCreated, transaction)
 }
 
 func GetTransaction(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
-		return
-	}
-
+	userID, _ := c.Get("userID")
+	id, _ := strconv.Atoi(c.Param("id"))
 	var transaction models.Transaction
-	if err := DB.Preload("Category").Preload("Tags").First(&transaction, id).Error; err != nil {
+	if err := DB.Where("user_id = ?", userID).Preload("Category").Preload("Tags").First(&transaction, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Transaction not found"})
 		return
 	}
 	c.JSON(http.StatusOK, transaction)
 }
+
 func UpdateTransaction(c *gin.Context) {
+	userID, _ := c.Get("userID")
 	id, _ := strconv.Atoi(c.Param("id"))
 	var transaction models.Transaction
-	if err := DB.First(&transaction, id).Error; err != nil {
+	if err := DB.Where("user_id = ?", userID).First(&transaction, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Transaction not found"})
 		return
 	}
@@ -67,17 +78,17 @@ func UpdateTransaction(c *gin.Context) {
 		return
 	}
 	transaction.ID = uint(id)
+	transaction.UserID = userID.(uint)
 	DB.Save(&transaction)
 	c.JSON(http.StatusOK, transaction)
 }
-func DeleteTransaction(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
-	var transaction models.Transaction
 
-	if err := DB.First(&transaction, id).Error; err != nil {
+func DeleteTransaction(c *gin.Context) {
+	userID, _ := c.Get("userID")
+	id, _ := strconv.Atoi(c.Param("id"))
+	if err := DB.Where("user_id = ?", userID).Delete(&models.Transaction{}, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Transaction not found"})
 		return
 	}
-	DB.Delete(&transaction)
 	c.Status(http.StatusNoContent)
 }
