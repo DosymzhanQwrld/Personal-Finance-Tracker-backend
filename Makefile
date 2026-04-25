@@ -1,8 +1,8 @@
 DB_URL=postgres://postgres:postgres@localhost:5432/finance_db?sslmode=disable
-MIGRATE_PATH=db/migrations
+MIGRATE_PATH=./config/migrations
 
 create:
-	migrate create -ext sql -dir $(MIGRATE_PATH) -seq $(name)
+	migrate create -ext sql -dir $(MIGRATE_PATH) $(name)
 
 migrate-up:
 	migrate -path $(MIGRATE_PATH) -database "$(DB_URL)" up
