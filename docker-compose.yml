@@ -26,7 +26,12 @@ services:
       - "8081:8081"
     networks:
       - finance-network
-
+  notification-service:
+    build: ./notification-service
+    ports:
+      - "8082:8082"
+    networks:
+      - finance-network
   db:
     image: postgres:15-alpine
     environment:
