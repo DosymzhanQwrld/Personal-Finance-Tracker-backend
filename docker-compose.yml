@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  finance-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+      - exchange-service
+    restart: always
+    environment:
+      - DB_HOST=db
+      - EXCHANGE_SERVICE_URL=http://exchange-service:8081
+      - NOTIFY_SERVICE_URL=http://notification-service:8082
+    networks:
+      - finance-network
+
+  exchange-service:
+    build:
+      context: ./exchange-service
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    networks:
+      - finance-network
+  notification-service:
+    build: ./notification-service
+    ports:
+      - "8082:8082"
+    networks:
+      - finance-network
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=finance_db
+    ports:
+      - "5432:5432"
+    networks:
+      - finance-network
+
+networks:
+  finance-network:
+    driver: bridge
