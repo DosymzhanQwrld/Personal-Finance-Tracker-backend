@@ -61,7 +61,7 @@ func GetTransaction(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 
 	var tx models.Transaction
-	if err := DB.Where("id = ? AND user_id = ?", id, userID).Preload("Tags").First(&tx).Error; err != nil {
+	if err := DB.Where("id = ? AND user_id = ?", id, userID).Preload("Tags").Preload("Category").First(&tx).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Transaction not found"})
 		return
 	}
