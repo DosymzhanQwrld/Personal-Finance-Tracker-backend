@@ -4,6 +4,7 @@ import (
 	"awesomeProject3/middleware"
 	"awesomeProject3/models"
 	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -11,30 +12,47 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+func validatePassword(password string) bool {
+	if len(password) < 6 {
+		return false
+	}
+	hasUpper := regexp.MustCompile(`[A-Z]`).MatchString(password)
+	hasDigit := regexp.MustCompile(`[0-9]`).MatchString(password)
+	return hasUpper && hasDigit
+}
+
 func Register(c *gin.Context) {
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный формат данных или некорректный email"})
 		return
 	}
-	
+
+	if !validatePassword(user.Password) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Пароль должен быть не менее 6 символов, содержать хотя бы одну заглавную букву и одну цифру"})
+		return
+	}
+
 	var exists models.User
-	if err := DB.Where("username = ?", user.Username).First(&exists).Error; err == nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "Пользователь с таким логином уже зарегистрирован"})
+	if err := DB.Where("username = ? OR email = ?", user.Username, user.Email).First(&exists).Error; err == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "Пользователь с таким логином или email уже зарегистрирован"})
 		return
 	}
 
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	user.Password = string(hashedPassword)
 	if err := DB.Create(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "User already exists"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка при создании пользователя"})
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"message": "Success"})
 }
 
 func Login(c *gin.Context) {
-	var input models.User
+	var input struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
 	var user models.User
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -58,7 +76,7 @@ func Login(c *gin.Context) {
 
 func GetUsers(c *gin.Context) {
 	var users []models.User
-	if err := DB.Select("id", "username", "created_at").Find(&users).Error; err != nil {
+	if err := DB.Select("id", "username", "email", "created_at").Find(&users).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch users"})
 		return
 	}

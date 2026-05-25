@@ -12,11 +12,31 @@ import (
 	"github.com/go-resty/resty/v2"
 )
 
+func CORSMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	}
+}
+
 func main() {
 	db := config.ConnectDatabase()
 	handlers.DB = db
 
 	r := gin.Default()
+
+	r.Use(CORSMiddleware())
+
+	r.StaticFile("/", "./frontend/index.html")
+
 	client := resty.New()
 
 	r.POST("/register", handlers.Register)
@@ -41,6 +61,7 @@ func main() {
 		}
 		c.Data(http.StatusOK, "application/json", resp.Body())
 	})
+
 	r.POST("/send-notify", func(c *gin.Context) {
 		notifyURL := os.Getenv("NOTIFY_SERVICE_URL")
 		if notifyURL == "" {
@@ -58,7 +79,7 @@ func main() {
 			Post(notifyURL + "/send")
 
 		if err != nil {
-			c.JSON(http.StatusBadGateway, gin.H{"error": "Notification service error"})
+			c.Status(http.StatusBadGateway)
 			return
 		}
 
